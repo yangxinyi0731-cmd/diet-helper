@@ -112,6 +112,30 @@ button{cursor:pointer;}
 .panel-foot{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 16px 14px; border-top:1px solid var(--line);}
 .panel-foot .primary{width:auto; padding:11px 22px;}
 .panel-foot span{font-size:13px; color:var(--muted);}
+.free textarea{width:100%; border:1.5px solid var(--line); border-radius:12px; padding:10px 12px; font-size:15px; font-family:inherit; background:#fafbfc; resize:vertical; min-height:54px;}
+.fr-hint{color:var(--muted); font-size:12px; margin-top:6px;}
+.free-actions{display:flex; gap:8px; margin-top:10px;}
+.free-actions .primary{width:auto; flex:1;}
+.fr-total{font-weight:700; font-size:15px; color:var(--green); margin:12px 0 4px;}
+.free-row{display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 0; border-top:1px solid var(--line);}
+.fr-total + .free-row{border-top:0;}
+.fr-name{font-weight:600; font-size:14.5px;}
+.fr-badge{font-size:11px; color:var(--amber); background:var(--amber-bg); border-radius:999px; padding:1px 7px; margin-left:6px;}
+.fr-num{color:var(--muted); font-size:12.5px; margin-top:1px;}
+.fr-ops{display:flex; align-items:center; gap:5px;}
+.fr-ops button{border:1.5px solid var(--line); background:#fff; border-radius:9px; width:32px; height:32px; font-size:14px; font-family:inherit;}
+.fr-ops .del{width:auto; padding:0 9px; color:var(--red); font-size:13px;}
+.fr-fix{border:0; background:none; color:var(--blue); font-size:12.5px; font-family:inherit; padding:4px 6px;}
+.fr-edit{display:flex; gap:8px; align-items:center; padding:8px 0 2px; flex-wrap:wrap;}
+.fr-edit input{width:78px; border:1.5px solid var(--line); border-radius:9px; padding:8px; font-size:14px; font-family:inherit;}
+.fr-edit label{font-size:12.5px; color:var(--muted); display:flex; align-items:center; gap:4px;}
+.fr-edit input[type=checkbox]{width:auto;}
+.tagchips{display:flex; gap:8px; flex-wrap:wrap; margin:10px 0 2px;}
+.tagchips button{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 14px; font-size:13px; font-family:inherit; color:#4a4f57;}
+.tagchips button.on{background:var(--green); border-color:var(--green); color:#fff; font-weight:600;}
+.free-done{display:flex; gap:8px; margin-top:10px;}
+.free-done .primary{flex:2;}
+.ghost{flex:1; border:0; background:#eceef1; color:#3c4148; font-weight:600; font-size:15px; border-radius:12px; font-family:inherit;}
 .toast{position:fixed; left:50%; bottom:110px; transform:translateX(-50%) translateY(8px); background:rgba(23,26,30,.92); color:#fff; padding:10px 18px; border-radius:999px; font-size:14px; opacity:0; pointer-events:none; transition:all .2s; z-index:60; max-width:80vw; text-align:center;}
 .toast.on{opacity:1; transform:translateX(-50%) translateY(0);}
 </style>
@@ -146,6 +170,14 @@ button{cursor:pointer;}
 
   <div id="banners"></div>
   <div id="sugs"></div>
+
+  <div class="card free" id="freeCard">
+    <div class="card-head"><span>自由记录 · 直接打字</span><span class="muted">自动估算</span></div>
+    <textarea id="freeText" rows="2" placeholder="例：2碗米饭＋红烧肉＋炒青菜＋1个鸡蛋"></textarea>
+    <div class="fr-hint">用空格、逗号或「＋」分开；认不出的按相似菜估个数（带"估"字），点「校正」改数字后它会记住这道菜。</div>
+    <div class="free-actions"><button class="primary" id="freeParse">分析</button></div>
+    <div id="freeResult" class="hidden"></div>
+  </div>
 
   <button class="primary big" id="btnAddFood">＋ 记一份吃的</button>
 
@@ -321,6 +353,278 @@ const ITEMS = [
   { tab:'supp', group:'碳水', tag:'supp', name:'米糊3勺', kcal:180, p:4, c:38 }
 ];
 
+const FOOD_DB = [
+['米饭','碗',190,4,42,'白米饭|大米饭|饭',200],
+['馒头','个',230,7,45,'',100],
+['花卷','个',200,5,38,''],
+['肉包','个',220,8,30,'肉包子|大肉包'],
+['素包','个',160,5,28,'素包子|菜包|菜包子'],
+['包子','个',200,7,28,'小包子'],
+['豆沙包','个',200,4,38,''],
+['小笼包','个',40,2,4,''],
+['烧麦','个',60,2,8,'烧卖'],
+['蒸饺','个',45,2,6,''],
+['水饺','个',45,2.5,5,'饺子'],
+['馄饨','碗',300,12,40,'云吞'],
+['面条','碗',400,10,70,'面|挂面|清汤面',400],
+['牛肉面','碗',520,18,75,''],
+['兰州拉面','碗',480,16,72,'拉面'],
+['刀削面','碗',500,14,80,''],
+['米线','碗',420,10,75,''],
+['米粉','碗',430,10,78,''],
+['河粉','碗',450,10,80,''],
+['炒面','份',600,14,85,''],
+['炒河粉','份',620,12,90,''],
+['蛋炒饭','份',550,12,80,'炒饭|炒米饭'],
+['盖饭','份',600,18,85,'盖浇饭|盖浇'],
+['红烧肉盖饭','份',700,20,85,''],
+['鱼香肉丝盖饭','份',650,18,88,''],
+['宫保鸡丁盖饭','份',650,20,85,''],
+['番茄鸡蛋盖饭','份',580,16,85,'西红柿鸡蛋盖饭|番茄炒蛋盖饭'],
+['咖喱鸡饭','份',700,22,90,'咖喱饭'],
+['牛肉盖饭','份',680,24,85,''],
+['黄焖鸡','份',650,24,70,'黄焖鸡米饭'],
+['卤肉饭','份',650,20,90,''],
+['煲仔饭','份',700,22,95,''],
+['石锅拌饭','份',650,18,90,'拌饭'],
+['肠粉','份',300,10,45,''],
+['粥','碗',90,2,19,'白粥|稀饭|大米粥|米粥'],
+['小米粥','碗',110,3,22,''],
+['皮蛋瘦肉粥','碗',180,8,25,'瘦肉粥'],
+['油条','根',270,5,30,''],
+['煎饼果子','个',450,12,55,'煎饼'],
+['手抓饼','个',350,8,40,''],
+['鸡蛋灌饼','个',420,12,48,''],
+['鸡蛋饼','个',300,10,35,''],
+['大饼','个',300,8,55,'烙饼'],
+['玉米','根',150,4,30,'玉米棒|煮玉米',200],
+['红薯','个',130,2,30,'地瓜|蒸红薯',150],
+['紫薯','个',120,2,28,''],
+['烤红薯','个',180,3,42,''],
+['土豆','个',120,3,25,'蒸土豆'],
+['红烧肉','份',420,12,15,''],
+['回锅肉','份',380,14,15,''],
+['鱼香肉丝','份',300,14,20,''],
+['宫保鸡丁','份',320,20,18,''],
+['糖醋里脊','份',380,16,40,''],
+['小炒肉','份',330,16,12,'辣椒炒肉|农家小炒肉'],
+['辣子鸡','份',350,20,12,''],
+['可乐鸡翅','份',330,20,20,'鸡翅'],
+['口水鸡','份',300,22,8,''],
+['白切鸡','份',280,24,3,''],
+['烤鸭','份',450,20,8,'片皮鸭|鸭肉'],
+['鸡腿','个',250,20,5,'大鸡腿'],
+['鸡排','份',290,22,12,'炸鸡排'],
+['鸡胸肉','份',180,30,2,'鸡胸',100],
+['炸鸡','份',450,22,25,'炸鸡块'],
+['鸡米花','份',380,18,25,''],
+['鸭腿','个',260,20,4,''],
+['牛肉','份',220,22,4,'炒牛肉|烧牛肉',120],
+['炖牛肉','份',280,24,6,'土豆炖牛肉'],
+['番茄牛腩','份',300,22,12,'西红柿牛腩|牛腩'],
+['水煮牛肉','份',420,22,10,''],
+['红烧排骨','份',380,20,12,'排骨'],
+['糖醋排骨','份',400,18,30,''],
+['狮子头','个',250,12,8,'肉丸|大肉丸'],
+['梅菜扣肉','份',450,14,12,'扣肉'],
+['水煮肉片','份',420,18,12,''],
+['猪蹄','份',400,20,5,''],
+['香肠','根',250,10,8,'腊肠'],
+['培根','片',50,3,1,''],
+['火腿','片',40,2,1,'火腿片'],
+['鸡爪','份',200,10,5,'凤爪'],
+['酸菜鱼','份',420,24,12,''],
+['水煮鱼','份',450,24,12,''],
+['红烧鱼','份',280,22,6,''],
+['清蒸鱼','份',220,24,3,'蒸鱼'],
+['鱼块','份',190,20,6,'',150],
+['烤鱼','份',500,26,15,''],
+['虾','份',150,18,2,'大虾|基围虾',100],
+['虾仁','份',160,20,3,''],
+['蒜蓉虾','份',220,18,8,''],
+['螃蟹','只',150,18,2,'大闸蟹'],
+['鱿鱼','份',200,18,8,'烤鱿鱼'],
+['生蚝','个',60,5,3,'牡蛎'],
+['烤串','串',100,7,3,'羊肉串|肉串'],
+['炸串','串',150,5,10,''],
+['麻辣烫','份',550,20,60,''],
+['麻辣香锅','份',700,25,50,'香锅'],
+['火锅','顿',1000,40,60,''],
+['烤肉','份',600,30,20,'烧烤'],
+['沙拉','份',150,8,12,'蔬菜沙拉'],
+['鸡胸沙拉','份',250,25,15,''],
+['炒青菜','份',70,3,6,'青菜|小白菜'],
+['菠菜','份',70,3,5,'炒菠菜'],
+['生菜','份',50,2,5,''],
+['油麦菜','份',65,2,5,''],
+['娃娃菜','份',60,2,5,''],
+['西兰花','份',75,4,6,'西蓝花|炒西兰花'],
+['花菜','份',80,3,7,'菜花|花椰菜|干锅花菜'],
+['炒豆芽','份',80,3,6,'豆芽'],
+['炒藕片','份',120,3,20,'莲藕|藕'],
+['土豆丝','份',140,3,18,'炒土豆丝'],
+['地三鲜','份',280,5,30,''],
+['干煸豆角','份',220,5,15,'四季豆|干煸四季豆'],
+['茄子','份',150,3,12,'红烧茄子'],
+['烤茄子','份',200,4,15,''],
+['番茄','个',25,1,5,'西红柿'],
+['番茄炒蛋','份',180,10,8,'西红柿炒蛋|番茄鸡蛋|西红柿鸡蛋'],
+['韭菜炒蛋','份',190,10,6,''],
+['蒸蛋','份',120,10,2,'鸡蛋羹|水蒸蛋'],
+['麻婆豆腐','份',200,10,10,''],
+['家常豆腐','份',170,11,6,''],
+['红烧豆腐','份',190,11,8,''],
+['豆腐','份',150,12,4,''],
+['香干炒肉','份',210,12,8,''],
+['木耳','份',80,2,10,'炒木耳'],
+['香菇','份',70,3,8,'炒香菇'],
+['金针菇','份',70,3,10,''],
+['杏鲍菇','份',90,3,12,''],
+['青椒肉丝','份',200,12,8,''],
+['肉末茄子','份',220,8,15,''],
+['肉末豆角','份',240,8,12,''],
+['木须肉','份',260,14,12,''],
+['玉米粒','份',120,4,25,'炒玉米'],
+['鸡蛋','个',70,6.5,1,'水煮蛋|白煮蛋|蛋'],
+['煎蛋','个',110,6,1,'荷包蛋'],
+['茶叶蛋','个',75,7,2,''],
+['卤蛋','个',75,7,2,''],
+['咸鸭蛋','个',120,8,3,''],
+['蛋清','个',20,4,0,'只吃蛋清'],
+['豆浆','杯',90,6,8,'豆奶'],
+['豆腐脑','碗',120,8,8,''],
+['牛奶','盒',165,8,12,'纯牛奶|常温奶'],
+['奶粉','份',150,8,16,'冲奶粉'],
+['酸奶','瓶',200,6.5,28,'常温酸奶'],
+['希腊酸奶','杯',120,10,10,''],
+['燕麦','份',180,6,30,'燕麦片|即食燕麦'],
+['米糊','勺',60,1.3,13,'米糊冲|米糊粉'],
+['米糊一碗','碗',180,4,38,'一碗米糊'],
+['面包','片',85,3,15,'吐司'],
+['全麦面包','片',90,4,16,''],
+['小面包','个',130,3,22,'达利园'],
+['蛋糕','块',250,4,35,''],
+['蛋挞','个',200,4,22,''],
+['三明治','个',300,12,30,''],
+['寿司','份',250,8,40,'寿司卷'],
+['汉堡','个',500,25,45,'牛肉堡'],
+['鸡腿堡','个',520,24,50,'香辣鸡腿堡'],
+['披萨','片',260,10,30,'比萨'],
+['薯条','份',320,4,42,''],
+['鸡块','块',45,3,5,'上校鸡块'],
+['鸡肉卷','个',450,18,45,'老北京鸡肉卷'],
+['泡面','桶',470,9,62,'方便面'],
+['拌面','份',450,12,75,'葱油拌面'],
+['凉皮','份',350,8,55,''],
+['肉夹馍','个',450,15,45,''],
+['螺蛳粉','份',550,12,80,''],
+['酸辣粉','份',450,8,70,''],
+['关东煮','串',60,3,6,'关东煮串'],
+['烤肠','根',150,5,8,''],
+['鸡肉肠','根',100,6,3,'火腿肠'],
+['饭团','个',200,6,35,''],
+['香蕉','根',100,1,25,''],
+['苹果','个',95,0.5,25,''],
+['橙子','个',70,1,17,'橘子|橙'],
+['西瓜','份',80,1,20,'一块西瓜'],
+['葡萄','份',70,0.5,18,''],
+['草莓','份',50,1,12,''],
+['梨','个',90,0.5,23,''],
+['桃','个',80,1,20,'桃子'],
+['猕猴桃','个',60,1,14,'奇异果'],
+['圣女果','份',40,1,8,'小番茄'],
+['蓝莓','盒',80,1,20,''],
+['芒果','个',120,1,30,''],
+['菠萝','份',80,1,20,''],
+['可乐','瓶',215,0,54,''],
+['雪碧','瓶',215,0,54,''],
+['果汁','瓶',200,0,48,'果汁饮料'],
+['奶茶','杯',450,6,75,'中杯奶茶'],
+['珍珠奶茶','杯',520,6,85,''],
+['拿铁','杯',180,9,15,'咖啡拿铁'],
+['美式咖啡','杯',10,0.5,2,'美式|黑咖啡'],
+['运动饮料','瓶',120,0,30,'脉动|宝矿力'],
+['士力架','根',250,4,35,'能量棒|巧克力棒'],
+['巧克力','块',150,2,17,''],
+['薯片','袋',300,3,30,''],
+['饼干','份',130,2,20,'苏打饼干'],
+['坚果','包',145,4,5,'坚果小包|每日坚果'],
+['花生','份',150,6,6,'花生米'],
+['瓜子','份',150,6,5,''],
+['冰淇淋','个',180,3,25,'甜筒'],
+['果冻','个',60,0,15,''],
+['乳清蛋白','勺',100,22,3,'蛋白粉|乳清'],
+['酵母蛋白','勺',100,20,3,'酵母蛋白粉'],
+['蛋白质粉','勺',110,22,3,''],
+['蛋白棒','根',200,15,20,'']
+];
+
+const NUM_WORDS = { '半':0.5, '一':1, '两':2, '二':2, '三':3, '四':4, '五':5, '六':6, '七':7, '八':8, '九':9, '十':10 };
+const QTY_UNITS = '碗|小碗|大碗|份|小份|大份|个|只|根|片|勺|杯|盒|袋|串|块|条|颗|瓶|罐|听|张|顿|包|盘|口|斤|两|千克|公斤|克|kg|KG|Kg|g|G|ml|毫升';
+const WEIGHT_UNITS = ['克','g','G','kg','KG','Kg','千克','公斤','斤','两','ml','毫升'];
+
+function foodPool(){
+  const custom = (db.customFoods || []).map(f => ({ name: f.name, kcal: f.kcal, p: f.p, c: f.c || 0, grams: f.grams, keys: [f.name].concat(f.alias ? [f.alias] : []) }));
+  const builtin = FOOD_DB.map(row => ({ name: row[0], kcal: row[2], p: row[3], c: row[4], grams: row[6], keys: [row[0]].concat((row[5] || '').split('|').filter(Boolean)) }));
+  return custom.concat(builtin);
+}
+
+function guessByKeywords(token){
+  const has = k => token.indexOf(k) !== -1;
+  const some = arr => arr.some(has);
+  if (some(['麻辣香锅','香锅','火锅'])) return { kcal: 700, p: 25, c: 50 };
+  if (some(['麻辣烫'])) return { kcal: 550, p: 20, c: 60 };
+  if (some(['盖饭','盖浇','炒饭','拌饭','烩饭','焖饭','煲仔'])) return { kcal: 620, p: 18, c: 85 };
+  if (some(['面','粉','米线','河粉','拉面','刀削','馄饨'])) return { kcal: 480, p: 14, c: 75 };
+  if (some(['汤'])) return { kcal: 40, p: 2, c: 3 };
+  if (some(['蛋'])) return { kcal: 90, p: 6, c: 2 };
+  if (some(['奶','豆浆'])) return { kcal: 150, p: 7, c: 15 };
+  if (some(['肉','鸡','牛','猪','鱼','虾','鸭','鹅','排','肠','骨'])) return { kcal: 280, p: 18, c: 8 };
+  if (some(['菜','菇','瓜','豆','藕','笋','芽','耳','茄'])) return { kcal: 80, p: 3, c: 8 };
+  if (some(['包','饺','馍','饼','卷'])) return { kcal: 240, p: 8, c: 38 };
+  if (some(['蛋糕','面包','糕','酥','派','甜'])) return { kcal: 250, p: 5, c: 35 };
+  if (some(['饭'])) return { kcal: 550, p: 12, c: 80 };
+  return { kcal: 200, p: 8, c: 25 };
+}
+
+function parseMealText(text){
+  const pool = foodPool();
+  const clean = String(text || '').replace(/[（(][^）)]*[）)]/g, '');
+  const chunks = clean.split(/[\s,，、;；+＋/]+|还有|以及|和|跟/).filter(x => x);
+  const out = [];
+  for (const raw of chunks){
+    let qty = null, unit = null;
+    let m = raw.match(new RegExp('(\\d+(?:\\.\\d+)?)\\s*(' + QTY_UNITS + ')?'));
+    if (!m) m = raw.match(new RegExp('(半|一|两|二|三|四|五|六|七|八|九|十)\\s*(' + QTY_UNITS + ')'));
+    if (m){
+      qty = /^\d/.test(m[1]) ? parseFloat(m[1]) : NUM_WORDS[m[1]];
+      unit = m[2] || null;
+    }
+    let best = null, bestLen = 0;
+    for (const f of pool){
+      for (const k of f.keys){
+        if (k && raw.indexOf(k) !== -1 && k.length > bestLen){ best = f; bestLen = k.length; }
+      }
+    }
+    if (best){
+      let mult = qty == null ? 1 : qty;
+      if (unit && WEIGHT_UNITS.indexOf(unit) !== -1){
+        let grams;
+        if (unit === '斤') grams = 500 * mult;
+        else if (unit === '两') grams = 50 * mult;
+        else if (unit === 'kg' || unit === 'KG' || unit === 'Kg' || unit === '千克' || unit === '公斤') grams = 1000 * mult;
+        else grams = mult;
+        mult = best.grams ? grams / best.grams : Math.min(4, Math.max(0.5, grams / 150));
+      }
+      out.push({ name: best.name, kcal: best.kcal, p: best.p, c: best.c, qty: Math.round(mult * 100) / 100, est: false });
+    } else {
+      const g = guessByKeywords(raw);
+      out.push({ name: raw, kcal: g.kcal, p: g.p, c: g.c, qty: qty == null ? 1 : qty, est: true });
+    }
+  }
+  return out;
+}
+
 const $ = s => document.querySelector(s);
 const comboById = id => COMBOS.find(c => c.id === id);
 const pad = n => String(n).padStart(2, '0');
@@ -340,10 +644,10 @@ function loadDB(){
     const raw = localStorage.getItem(LS_KEY);
     if (raw) {
       const data = JSON.parse(raw);
-      if (data && data.days) return { days: data.days, weights: data.weights || [], version: 1 };
+      if (data && data.days) return { days: data.days, weights: data.weights || [], customFoods: data.customFoods || [], version: 1 };
     }
   } catch (e) {}
-  return { days: {}, weights: [], version: 1 };
+  return { days: {}, weights: [], customFoods: [], version: 1 };
 }
 
 function saveDB(){
@@ -695,9 +999,133 @@ function doImport(json){
   catch (e) { toast('这段内容不是有效的备份'); return; }
   if (!data || !data.days) { toast('备份格式不对'); return; }
   if (!confirm('导入会覆盖当前全部记录，继续？')) return;
-  db = { days: data.days || {}, weights: data.weights || [], version: 1 };
+  db = { days: data.days || {}, weights: data.weights || [], customFoods: data.customFoods || [], version: 1 };
   saveDB(); initDay(); renderAll(); toast('导入完成');
 }
+
+let freeItems = [];
+let freeTag = '';
+let freeEditIdx = -1;
+
+function defaultTag(){
+  const d = new Date();
+  const h = d.getHours() + d.getMinutes() / 60;
+  if (h >= 17.5 && h < 21.5) return 'main';
+  if (h >= 11 && h < 14.5) return 'main';
+  if (h >= 21.5 || h < 5) return 'night';
+  return 'snack';
+}
+
+function renderFree(){
+  const box = $('#freeResult');
+  if (!freeItems.length){
+    box.classList.add('hidden');
+    box.innerHTML = '';
+    return;
+  }
+  let k = 0, p = 0;
+  freeItems.forEach(it => { k += it.kcal * it.qty; p += it.p * it.qty; });
+  const rows = freeItems.map((it, i) => {
+    const badge = it.est ? '<span class="fr-badge">估</span>' : '';
+    const fixBtn = it.est ? '<button class="fr-fix" data-fi="' + i + '" data-op="fix">校正</button>' : '';
+    let edit = '';
+    if (freeEditIdx === i) {
+      edit = '<div class="fr-edit">' +
+        '<label>热量<input type="number" inputmode="numeric" id="fixK" value="' + fmt(it.kcal) + '"></label>' +
+        '<label>蛋白<input type="number" inputmode="numeric" id="fixP" value="' + fmt(it.p) + '"></label>' +
+        '<label><input type="checkbox" id="fixSave" checked>记住</label>' +
+        '<button class="fr-fix" data-fi="' + i + '" data-op="fixsave">保存</button>' +
+        '</div>';
+    }
+    return '<div class="free-row"><div><div class="fr-name">' + it.name + badge + '</div>' +
+      '<div class="fr-num">×' + it.qty + ' · ' + fmt(it.kcal * it.qty) + ' kcal · 蛋白 ' + fmt(it.p * it.qty) + ' g</div>' + edit + '</div>' +
+      '<div class="fr-ops">' +
+      '<button data-fi="' + i + '" data-op="minus">−</button>' +
+      '<button data-fi="' + i + '" data-op="plus">＋</button>' +
+      fixBtn +
+      '<button class="del" data-fi="' + i + '" data-op="del">删</button>' +
+      '</div></div>';
+  }).join('');
+  const tags = [['wake', '起床餐'], ['main', '正餐'], ['snack', '加餐'], ['night', '夜宵']];
+  box.innerHTML =
+    '<div class="fr-total">合计 ≈ ' + fmt(k) + ' kcal · 蛋白 ' + fmt(p) + ' g</div>' + rows +
+    '<div class="tagchips">' + tags.map(t =>
+      '<button data-tag="' + t[0] + '" class="' + (freeTag === t[0] ? 'on' : '') + '">' + t[1] + '</button>').join('') + '</div>' +
+    '<div class="free-done"><button class="primary" id="freeCommit">记下这 ' + freeItems.length + ' 项</button>' +
+    '<button class="ghost" id="freeCancel">取消</button></div>';
+  box.classList.remove('hidden');
+}
+
+function doFreeParse(){
+  const t = $('#freeText').value.trim();
+  if (!t) { toast('先把吃了什么写上去'); return; }
+  freeItems = parseMealText(t);
+  if (!freeItems.length) { toast('没解析出东西，再写一遍？'); return; }
+  if (!freeTag) freeTag = defaultTag();
+  freeEditIdx = -1;
+  renderFree();
+}
+
+function saveCustomFood(name, kcal, p){
+  db.customFoods = db.customFoods || [];
+  const rec = { name: name, kcal: fmt(kcal), p: Math.round(p * 10) / 10, c: 0, alias: name, grams: undefined };
+  const i = db.customFoods.findIndex(f => f.name === name);
+  if (i >= 0) db.customFoods[i] = rec;
+  else db.customFoods.push(rec);
+  saveDB();
+}
+
+function commitFree(){
+  if (!freeItems.length) return;
+  let k = 0, p = 0;
+  const tag = freeTag || defaultTag();
+  for (const it of freeItems){
+    k += it.kcal * it.qty;
+    p += it.p * it.qty;
+    day.entries.push({
+      id: 'e' + Date.now() + Math.floor(Math.random() * 100000),
+      name: it.name, kcal: it.kcal, p: it.p, c: it.c, mult: it.qty, tag: tag, t: nowTimeStr()
+    });
+  }
+  freeItems = [];
+  freeEditIdx = -1;
+  $('#freeText').value = '';
+  saveDB(); renderAll(); renderFree();
+  toast('已记下 ≈ ' + fmt(k) + ' kcal · 蛋白 ' + fmt(p) + ' g');
+}
+
+$('#freeParse').addEventListener('click', doFreeParse);
+$('#freeText').addEventListener('keydown', ev => {
+  if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); doFreeParse(); }
+});
+$('#freeCard').addEventListener('click', ev => {
+  const b = ev.target.closest('button');
+  if (!b) return;
+  if (b.id === 'freeCommit') { commitFree(); return; }
+  if (b.id === 'freeCancel') { freeItems = []; freeEditIdx = -1; renderFree(); return; }
+  if (b.dataset.tag) { freeTag = b.dataset.tag; renderFree(); return; }
+  const i = parseInt(b.dataset.fi, 10);
+  const it = freeItems[i];
+  if (!it) return;
+  const op = b.dataset.op;
+  if (op === 'minus') { it.qty = Math.max(0.5, Math.round((it.qty - 0.5) * 100) / 100); freeEditIdx = -1; renderFree(); }
+  else if (op === 'plus') { it.qty = Math.min(10, Math.round((it.qty + 0.5) * 100) / 100); freeEditIdx = -1; renderFree(); }
+  else if (op === 'del') { freeItems.splice(i, 1); freeEditIdx = -1; renderFree(); }
+  else if (op === 'fix') { freeEditIdx = (freeEditIdx === i ? -1 : i); renderFree(); }
+  else if (op === 'fixsave') {
+    const k = parseFloat($('#fixK').value);
+    const p = parseFloat($('#fixP').value);
+    if (!(k >= 0) || !(p >= 0)) { toast('数字填得不对'); return; }
+    const remember = $('#fixSave').checked;
+    it.kcal = k;
+    it.p = p;
+    it.est = false;
+    if (remember) saveCustomFood(it.name, k, p);
+    freeEditIdx = -1;
+    renderFree();
+    toast(remember ? '已更新，下次直接认得' : '已更新');
+  }
+});
 
 $('#segType').addEventListener('click', ev => {
   const b = ev.target.closest('button');
