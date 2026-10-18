@@ -300,8 +300,8 @@ const COMBOS = [
   { id:'mainh',   name:'食堂·半档',      desc:'1.5碗饭＋一大荤＋一小荤＋一素＋汤',               kcal:825, p:39, c:90,  tag:'main' },
   { id:'snackA',  name:'加餐A',          desc:'常温奶＋面包1片',                                 kcal:250, p:11, c:27,  tag:'snack' },
   { id:'snackB',  name:'加餐B',          desc:'常温酸奶＋卤蛋×2',                                kcal:350, p:20, c:32,  tag:'snack' },
-  { id:'postW',   name:'练后杯',         desc:'蛋白粉1勺＋米糊2勺（蛋白粉一天封顶2勺）',           kcal:220, p:22, c:28,  tag:'snack' },
-  { id:'nightA',  name:'睡前杯·粉冲米糊', desc:'蛋白粉2勺＋米糊2勺，温水冲开',                      kcal:320, p:40, c:30,  tag:'night' },
+  { id:'postW',   name:'练后杯',         desc:'蛋白粉2勺＋米糊2勺，练后30分钟内（每天就这一杯）',   kcal:320, p:40, c:30,  tag:'snack' },
+  { id:'nightA',  name:'夜宵·囤货轻版',   desc:'常温奶1盒＋卤蛋1–2个（免冰箱囤货）',                kcal:315, p:21, c:14,  tag:'night' },
   { id:'nightB',  name:'夜宵·面包版',    desc:'常温奶＋面包2片＋卤蛋×2＋坚果小包',               kcal:630, p:32, c:55,  tag:'night' },
   { id:'shaxian', name:'沙县拌面＋卤蛋', desc:'外食版正餐',                                      kcal:520, p:19, c:78,  tag:'main' },
   { id:'preball', name:'打球前垫一口',   desc:'香蕉＋面包1片',                                   kcal:185, p:4,  c:40,  tag:'snack' }
@@ -712,7 +712,7 @@ function buildSuggestions(){
     return { cards, banners };
   }
 
-  if (!hasWake && simK > 150) {
+  if (!hasWake && simK > 150 && hour >= 5) {
     const c = comboById('wake');
     cards.push({ title: '先吃起床第一餐', desc: c.desc, kcal: c.kcal, p: c.p, comboId: 'wake',
       note: '起床后先吃这一餐，几点起都行，别空到中午。' });
@@ -726,10 +726,10 @@ function buildSuggestions(){
 
   let nightBUsed = false, nightAUsed = false, guard = 0;
   while (cards.length < 3 && simK > 150 && guard++ < 6) {
-    const late = hour >= 20 || (hour >= 18.5 && mainsLeft === 0);
+    const late = hour >= 20 || hour < 5 || (hour >= 18.5 && mainsLeft === 0);
     if (late) {
       if (simK >= 480 && !nightBUsed) { nightBUsed = true; pushCard('nightB', '夜宵'); simK -= 630; simP -= 32; continue; }
-      if (simK >= 180 && !nightAUsed) { nightAUsed = true; pushCard('nightA', '夜宵'); simK -= 320; simP -= 40; continue; }
+      if (simK >= 180 && !nightAUsed) { nightAUsed = true; pushCard('nightA', '夜宵'); simK -= 315; simP -= 21; continue; }
       pushCard('snackA', '再补个加餐'); simK -= 250; simP -= 11; continue;
     }
     if (simK >= 650 && mainsLeft > 0) {
@@ -748,10 +748,8 @@ function buildSuggestions(){
 
   if (hour >= 23) {
     const n = cards.find(c => c.comboId === 'nightA' || c.comboId === 'nightB');
-    if (n) n.note = (n.note ? n.note + ' ' : '') + '太晚了：选睡前杯（粉冲米糊），好消化。';
+    if (n) n.note = (n.note ? n.note + ' ' : '') + '太晚了：选囤货轻版（奶＋卤蛋），不占肚子。';
   }
-  const na = cards.find(c => c.comboId === 'nightA');
-  if (na) na.note = (na.note ? na.note + ' ' : '') + '米糊一天最多 3–4 勺（这杯占 2 勺）；蛋白粉一天最多 2 勺，当天用过练后杯就把这杯的粉减成 1 勺。';
   if (!cards.length) {
     cards.push({ title: '补个小份收尾', desc: '常温奶＋面包1片', kcal: 250, p: 11, comboId: 'snackA' });
     simK -= 250; simP -= 11;
