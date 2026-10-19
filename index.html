@@ -297,7 +297,7 @@ const TYPE_BY_WEEKDAY = { 0:'ball', 1:'ball', 2:'rest', 3:'ball', 4:'gym', 5:'re
 
 const COMBOS = [
   { id:'wake',    name:'起床第一餐',     desc:'肉包2个＋水煮蛋1个＋豆浆1杯（寝室版：麦片＋常温奶1盒＋水煮蛋2个）', kcal:600, p:28, c:70, tag:'wake' },
-  { id:'main',    name:'食堂·满配',      desc:'双饭＋一大荤＋一素＋汤（没喝粉杯的日子加一小荤）',  kcal:740, p:31, c:98,  tag:'main' },
+  { id:'main',    name:'食堂·满配',      desc:'双饭＋一大荤＋一素＋汤（不够就加一小荤）',  kcal:740, p:31, c:98,  tag:'main' },
   { id:'mainh',   name:'食堂·半档',      desc:'1.5碗饭＋一大荤＋一小荤＋一素＋汤',               kcal:825, p:39, c:90,  tag:'main' },
   { id:'snackA',  name:'加餐A',          desc:'常温奶＋面包1片',                                 kcal:250, p:11, c:27,  tag:'snack' },
   { id:'snackB',  name:'加餐B',          desc:'常温酸奶＋卤蛋×2',                                kcal:350, p:20, c:32,  tag:'snack' },
@@ -734,7 +734,7 @@ function buildSuggestions(){
       pushCard('snackA', '再补个加餐'); simK -= 250; simP -= 11; continue;
     }
     if (simK >= 650 && mainsLeft > 0) {
-      const id = day.type === 'rest' ? 'mainh' : 'main';
+      const id = 'main';
       const c = comboById(id);
       mainsLeft--;
       cards.push({ title: '下一顿正餐（食堂）', desc: c.desc, kcal: c.kcal, p: c.p, comboId: id,
